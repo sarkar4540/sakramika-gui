@@ -52,7 +52,11 @@ function ExecutionEdit(props) {
                                         :
                                         selected.executionState == STATE_STARTED
                                             ?
-                                            [<MaterialCommunityIcons name="play" size={18} />, " Started"]
+                                            [
+                                                <MaterialCommunityIcons name="play" size={18} />,
+                                                " Started",
+                                                selected.type == 1 ? <IconButton icon={"stop"} onPress={() => props.killWorkflow(selected.executionId)} /> : null
+                                            ]
                                             :
                                             selected.executionState == STATE_ENDED
                                                 ?

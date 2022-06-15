@@ -66,7 +66,8 @@ class Home extends React.Component {
             data: [],
             executions: [],
             show: HOME,
-            timer: null
+            timer: null,
+            selectedExecutionId: null
         }
         this.setState.bind(this);
     }
@@ -80,7 +81,7 @@ class Home extends React.Component {
         this.refresh()
     }
 
-    refresh(){
+    refresh() {
         (async () => {
             let workflows = await (await fetch(NODE_PROTOCOL + "//" + NODE_HOST + ":" + NODE_PORT + "/workflow")).json()
             console.dir(workflows)
@@ -203,13 +204,15 @@ class Home extends React.Component {
 
     }
 
-    startService(nodeId, serviceId) {
+    startService(nodeId, serviceId, dataId) {
         //TODO
     }
 
-    startWorkflow(workflowId) {
+    startWorkflow(workflowId, inputDataId) {
         (async () => {
-            let workflow = await (await fetch(NODE_PROTOCOL + "//" + NODE_HOST + ":" + NODE_PORT + "/workflow/" + workflowId + "/execute", { method: "POST", body: JSON.stringify({ dataId: 0 }) })).json()
+            let workflow = await (await fetch(NODE_PROTOCOL + "//" + NODE_HOST + ":" + NODE_PORT + "/workflow/" + workflowId + "/" + inputDataId + "/execute")).json()
+            this.setState({ show: EXECUTIONS, selectedExecutionId: workflow.id })
+            this.refresh()
         })()
     }
 
@@ -235,21 +238,51 @@ class Home extends React.Component {
         })()
     }
 
+    killWorkflow(executionId){
+        (async () => {
+            let workflow = await (await fetch(NODE_PROTOCOL + "//" + NODE_HOST + ":" + NODE_PORT + "/service/execution/"+executionId+"/kill")).json()
+            this.refresh()
+        })()
+    }
+
     render() {
         return <Surface style={styles.mainSurface}>
             <Surface style={styles.leftBar}>
-                <IconButton icon="home" color={this.state.show == HOME ? "red" : null} onPress={() => this.setState({ show: HOME })} />
-                <IconButton icon="database" color={this.state.show == DATA ? "red" : null} onPress={() => this.setState({ show: DATA })} />
-                <IconButton icon="script-text-play" color={this.state.show == EXECUTIONS ? "red" : null} onPress={() => this.setState({ show: EXECUTIONS })} />
-                <IconButton icon="refresh" onPress={()=>this.refresh()} />
+                <IconButton
+                    icon="home"
+                    color={this.state.show == HOME ? "red" : null}
+                    onPress={() => this.setState({ show: HOME })} />
+                <IconButton
+                    icon="database"
+                    color={this.state.show == DATA ? "red" : null}
+                    onPress={() => this.setState({ show: DATA })} />
+                <IconButton
+                    icon="script-text-play"
+                    color={this.state.show == EXECUTIONS ? "red" : null}
+                    onPress={() => this.setState({ show: EXECUTIONS, selectedExecutionId: null })} />
+                <IconButton icon="refresh" onPress={() => this.refresh()} />
+                <IconButton icon="cog" color={this.state.show == SETTINGS ? "red" : null} onPress={() => this.setState({ show: SETTINGS })} />
             </Surface>
             {
                 this.state.show == HOME
                     ?
                     <ScrollView contentContainerStyle={styles.homelists}>
-                        <WorkflowList thisNode={this.state.nodes.reduce((prev, node) => node.id == 0 ? node : prev)} uniformServices={this.state.uniformServices} dataTypes={this.state.dataTypes} workflows={this.state.workflows} onAddWorkflow={(title, inputDataTypeId, outputDataTypeId) => this.addWorkflow(title, inputDataTypeId, outputDataTypeId)} onEditWorkflow={(id, title, inputDataTypeId, outputDataTypeId) => this.editWorkflow(id, title, inputDataTypeId, outputDataTypeId)} onMakeService={(workflow, title, uniformServiceId) => this.makeService(workflow, title, uniformServiceId)} onRemoveService={(id) => this.removeService(id)} onStartWorkflow={(id) => this.startWorkflow(id)} onEditorWorkflow={(workflow) => this.editorWorkflow(workflow)} onRemoveWorkflow={(id) => this.removeWorkflow(id)} />
+                        <WorkflowList
+                            thisNode={this.state.nodes.reduce((prev, node) => node.id == 0 ? node : prev)}
+                            uniformServices={this.state.uniformServices}
+                            dataTypes={this.state.dataTypes}
+                            workflows={this.state.workflows}
+                            onAddWorkflow={(title, inputDataTypeId, outputDataTypeId) => this.addWorkflow(title, inputDataTypeId, outputDataTypeId)}
+                            onEditWorkflow={(id, title, inputDataTypeId, outputDataTypeId) => this.editWorkflow(id, title, inputDataTypeId, outputDataTypeId)}
+                            onMakeService={(workflow, title, uniformServiceId) => this.makeService(workflow, title, uniformServiceId)}
+                            onRemoveService={(id) => this.removeService(id)}
+                            data={this.state.data}
+                            onStartWorkflow={(id,dataId) => this.startWorkflow(id,dataId)} 
+                            onEditorWorkflow={(workflow) => this.editorWorkflow(workflow)}
+                            onRemoveWorkflow={(id) => this.removeWorkflow(id)}
+                        />
                         <MaterialCommunityIcons color={this.state.theme.colors.primary} size={18} name='all-inclusive' />
-                        <NodeList nodes={this.state.nodes} onAddNode={(ip, title) => this.addNode(ip, title)} onEditNode={(id, title) => this.editNode(id, title)} onStartService={(nodeId, serviceId) => this.startService(nodeId, serviceId)} onRemoveNode={(nodeId) => this.removeNode(nodeId)} />
+                        <NodeList nodes={this.state.nodes} onAddNode={(ip, title) => this.addNode(ip, title)} onEditNode={(id, title) => this.editNode(id, title)} onStartService={(nodeId, serviceId, dataId) => this.startService(nodeId, serviceId, dataId)} onRemoveNode={(nodeId) => this.removeNode(nodeId)} />
                         <MaterialCommunityIcons color={this.state.theme.colors.primary} size={18} name='all-inclusive' />
                         <StatusBar style="auto" />
                     </ScrollView>
@@ -260,7 +293,16 @@ class Home extends React.Component {
                         :
                         this.state.show == EXECUTIONS
                             ?
-                            <ExecutionEdit postData={(data, callback) => this.postData(data, callback)} deleteData={(dataId) => this.deleteData(dataId)} contentContainerStyle={styles.homelists} executions={this.state.executions} data={this.state.data} dataTypes={this.state.dataTypes} />
+                            <ExecutionEdit
+                                killWorkflow={(id)=>this.killWorkflow(id)}
+                                postData={(data, callback) => this.postData(data, callback)}
+                                deleteData={(dataId) => this.deleteData(dataId)}
+                                contentContainerStyle={styles.homelists}
+                                executions={this.state.executions}
+                                data={this.state.data}
+                                dataTypes={this.state.dataTypes}
+                                selectedId={this.state.selectedExecutionId}
+                            />
                             :
                             null
             }
@@ -268,7 +310,7 @@ class Home extends React.Component {
     }
 }
 
-const HOME = 0, DATA = 1, EXECUTIONS = 2;
+const HOME = 0, DATA = 1, EXECUTIONS = 2, SETTINGS=3;
 
 const styles = StyleSheet.create({
     homelists: {

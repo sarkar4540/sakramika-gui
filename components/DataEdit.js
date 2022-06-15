@@ -46,7 +46,7 @@ let BaseDataView = (props) => {
 
 //Add the DataViews in this dict 
 let dataViews = {
-    1: (props) => {
+    _1: (props) => {
         let [edit, setEdit] = useState(false)
         let [text, setText] = useState(props.data)
         console.log(props)

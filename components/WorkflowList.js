@@ -14,12 +14,31 @@ function WorkflowList(props) {
     let [outputDataTypeId, setOutputDataTypeId] = useState(0);
     let [showDropDown1, setShowDropDown1] = useState(false);
     let [showDropDown2, setShowDropDown2] = useState(false);
+    let [execute, setExecute] = useState(-1);
+    let [inputDataId, setInputDataId] = useState(0);
 
     return <View style={styles.workflowlist}>
         <Headline style={{ color: props.theme.colors.primary }}>Your Workflows</Headline>
         <View style={styles.workflows}>
             {
-                props.workflows ? props.workflows.map(workflow => editWorkflow == workflow.id ? <Card key={workflow.id} style={styles.workflow}>
+                props.workflows ? props.workflows.map(workflow => execute == workflow.id ? <Card key={workflow.id} style={styles.workflow}>
+                    <Card.Title style={styles.workflowtitle} left={props => <Avatar.Icon icon="sitemap" {...props} />} subtitle={workflow.title} title="Run Workflow" />
+                    <DropDown
+                        label="Input Data"
+                        value={inputDataId}
+                        list={[{ label: "None", value: 0 }].concat(props.data.filter(data=>data.dataTypeId==workflow.inputDataTypeId).map(data => {
+                            return { label: data.title, value: data.id }
+                        }))}
+                        setValue={setInputDataId}
+                        visible={showDropDown1}
+                        showDropDown={() => setShowDropDown1(true)}
+                        onDismiss={() => setShowDropDown1(false)}
+                    />
+                    <Card.Actions>
+                        <Button icon="play" color="green" onPress={() => { props.onStartWorkflow(workflow.id, inputDataId); setExecute(-1); }}>Start</Button>
+                    </Card.Actions>
+                    <IconButton size={16} color="gray" onPress={() => setEditWorkflow(-1)} icon="close-circle" style={styles.workflowRemoveButton} />
+                </Card> : editWorkflow == workflow.id ? <Card key={workflow.id} style={styles.workflow}>
                     <Card.Title style={styles.workflowtitle} left={props => <Avatar.Icon icon="sitemap" {...props} />} subtitle={workflow.title} title="Edit Workflow" />
                     <TextInput label="Workflow Title" value={workflowTitle} onChangeText={text => setWorkflowTitle(text)} />
                     <DropDown
@@ -69,7 +88,7 @@ function WorkflowList(props) {
                 </Card> : <Card key={workflow.id} style={styles.workflow}>
                     <Card.Title style={styles.workflowtitle} left={props => <Avatar.Icon icon="sitemap" {...props} />} title={workflow.title} />
                     <Card.Actions>
-                        {props.onStartWorkflow ? <Button icon="play" color="green" onPress={() => { props.onStartWorkflow(workflow.id); }}>Start</Button> : null}
+                        {props.onStartWorkflow ? <Button icon="play" color="green" onPress={() => { setExecute(workflow.id); }}>Start</Button> : null}
                         {
                             props.onMakeService && props.onRemoveService && props.thisNode
                                 ?
